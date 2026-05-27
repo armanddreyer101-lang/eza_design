@@ -13,13 +13,18 @@ const defaultProjects = [
     overdue: false,
     notes: 'Live tube plants displayed in a branded Checkers stand. 24 plants per stand. No soil required, just water. Easy care indoor plants.',
     valueAdd: '',
-    components: [
-      { name: 'Stand', cost: 10 },
-      { name: 'Tube', cost: 8 },
-      { name: 'Plant', cost: 7 },
+    products: [
+      {
+        id: 1,
+        name: 'Stand and Plant Kit',
+        components: [
+          { name: 'Stand', cost: 10 },
+          { name: 'Tube', cost: 8 },
+          { name: 'Plant', cost: 7 },
+        ],
+        sellPrice: 0,
+      },
     ],
-    sellOptions: [70, 80, 90],
-    sellLabels: ['Option A', 'Option B', 'Option C'],
     poDate: '',
     manufacturingDeadline: '',
     shippingDeadline: '',
@@ -36,9 +41,14 @@ const defaultProjects = [
     overdue: false,
     notes: 'Branded Checkers paper cup pot covers for nursery plants. Sizes: 10cm, 12cm, 14cm, 16cm, 16.5cm, 17cm, 19cm and larger.',
     valueAdd: '',
-    components: [],
-    sellOptions: [0, 0, 0],
-    sellLabels: ['Option A', 'Option B', 'Option C'],
+    products: [
+      {
+        id: 1,
+        name: 'Paper Cup',
+        components: [],
+        sellPrice: 0,
+      },
+    ],
     poDate: '',
     manufacturingDeadline: '',
     shippingDeadline: '',

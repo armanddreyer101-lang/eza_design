@@ -36,10 +36,22 @@ function calculateMargin(cost, sell) {
   return Math.max(0, Math.round(((totalSell - totalCost) / totalSell) * 100));
 }
 
+// Get total sell price for a project (sum of all product sell prices)
+function getProjectSellPrice(project) {
+  return (project.products || []).reduce((sum, p) => sum + Number(p.sellPrice || 0), 0);
+}
+
+// Get total component cost for a project (sum of all products' component costs)
+function getProjectTotalCost(project) {
+  return (project.products || []).reduce((sum, p) => {
+    return sum + (p.components || []).reduce((s, c) => s + Number(c.cost || 0), 0);
+  }, 0);
+}
+
 function renderSummary() {
   const activeCount = projects.length;
   const overdueCount = projects.filter((project) => project.overdue).length;
-  const pipelineValue = projects.reduce((sum, project) => sum + (project.sellOptions?.[2] || 0), 0);
+  const pipelineValue = projects.reduce((sum, project) => sum + getProjectSellPrice(project), 0);
 
   document.getElementById('activeCount').textContent = activeCount;
   document.getElementById('overdueCount').textContent = overdueCount;
@@ -55,6 +67,10 @@ function renderProjects() {
   rows.innerHTML = '';
 
   projects.forEach((project) => {
+    const sellPrice = getProjectSellPrice(project);
+    const totalCost = getProjectTotalCost(project);
+    const margin = calculateMargin(totalCost, sellPrice);
+
     const row = document.createElement('tr');
     row.classList.add('clickable-row');
     row.addEventListener('click', () => openProject(project.number));
@@ -70,9 +86,9 @@ function renderProjects() {
         <span class="badge ${stageClass[project.stage] || ''}">${project.stage}</span>
         ${project.recurring ? '<span class="badge badge--recurring">Recurring</span>' : ''}
       </td>
-      <td>${formatCurrency(project.targetCost)}</td>
-      <td>${formatCurrency(project.sellOptions?.[2] || 0)}</td>
-      <td>${calculateMargin(project.targetCost, project.sellOptions?.[2])}%</td>
+      <td>${formatCurrency(totalCost)}</td>
+      <td>${formatCurrency(sellPrice)}</td>
+      <td>${margin}%</td>
       <td class="${project.overdue ? 'overdue' : ''}">${project.deadline || '-'}</td>
     `;
     rows.appendChild(row);
@@ -119,9 +135,7 @@ function handleNewProjectSubmit(event) {
     overdue: false,
     notes: '',
     valueAdd: '',
-    components: [],
-    sellOptions: [70, 80, 90],
-    sellLabels: ['Option A', 'Option B', 'Option C'],
+    products: [],
     poDate: '',
     manufacturingDeadline: '',
     shippingDeadline: '',
@@ -143,9 +157,7 @@ function wireDashboardEvents() {
   document.getElementById('newProjectForm').addEventListener('submit', handleNewProjectSubmit);
 
   const logoutBtn = document.getElementById('logoutBtn');
-  if (logoutBtn) {
-    logoutBtn.addEventListener('click', logout);
-  }
+  if (logoutBtn) logoutBtn.addEventListener('click', logout);
 }
 
 function initDashboard() {

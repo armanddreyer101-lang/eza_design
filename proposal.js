@@ -24,29 +24,66 @@ function formatDisplayDate(dateString) {
   return date.toLocaleDateString('en-ZA', { day: '2-digit', month: 'short', year: 'numeric' });
 }
 
-function renderInternalProposal(proposalDate, conceptDescription, valueAddDescription, images, totalComponentCost) {
-  const componentRows = (currentProject.components || []).map((component) => `
+function calculateMargin(cost, sell) {
+  const totalCost = Number(cost) || 0;
+  const totalSell = Number(sell) || 0;
+  if (!totalSell) return 0;
+  return Math.max(0, Math.round(((totalSell - totalCost) / totalSell) * 100));
+}
+
+function renderInternalProposal(proposalDate, conceptDescription, valueAddDescription, images) {
+  const products = currentProject.products || [];
+  const quantity = Number(currentProject.quantity) || 0;
+
+  const productSections = products.map((product) => {
+    const productCost = (product.components || []).reduce((sum, c) => sum + Number(c.cost || 0), 0);
+    const sellPrice = Number(product.sellPrice) || 0;
+    const marginPerUnit = Math.max(0, sellPrice - productCost);
+    const marginPercent = calculateMargin(productCost, sellPrice);
+    const totalSell = sellPrice * quantity;
+    const totalMargin = marginPerUnit * quantity;
+
+    const componentRows = (product.components || []).map((c) => `
       <tr>
-        <td>${component.name}</td>
-        <td>${formatCurrency(component.cost)}</td>
+        <td>${c.name}</td>
+        <td>${formatCurrency(c.cost)}</td>
       </tr>
     `).join('');
 
-  const sellRows = (currentProject.sellOptions || []).map((price, index) => {
-    const marginPerUnit = Math.max(0, price - totalComponentCost);
-    const marginPercent = calculateMargin(totalComponentCost, price);
-    const totalSell = (Number(price) || 0) * (Number(currentProject.quantity) || 0);
-    const totalMargin = marginPerUnit * (Number(currentProject.quantity) || 0);
     return `
-      <tr>
-        <td>${currentProject.sellLabels?.[index] || `Option ${String.fromCharCode(65 + index)}`}</td>
-        <td>${formatCurrency(price)} per unit</td>
-        <td>${formatCurrency(marginPerUnit)} / ${marginPercent}% per unit</td>
-        <td>${formatCurrency(totalSell)} (total)</td>
-        <td>${formatCurrency(totalMargin)} (total margin)</td>
-      </tr>
+      <div class="proposal-product-block">
+        <h4>${product.name}</h4>
+        <table class="proposal-table">
+          <thead>
+            <tr><th>Component</th><th>Cost</th></tr>
+          </thead>
+          <tbody>${componentRows || '<tr><td colspan="2">No components added.</td></tr>'}</tbody>
+          <tfoot>
+            <tr><td><strong>Total component cost</strong></td><td><strong>${formatCurrency(productCost)}</strong></td></tr>
+          </tfoot>
+        </table>
+        <table class="proposal-table proposal-table--prices" style="margin-top:0.75rem;">
+          <thead>
+            <tr><th>Sell price</th><th>Margin per unit</th><th>Total sell</th><th>Total margin</th></tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td>${formatCurrency(sellPrice)}</td>
+              <td>${formatCurrency(marginPerUnit)} / ${marginPercent}%</td>
+              <td>${formatCurrency(totalSell)}</td>
+              <td>${formatCurrency(totalMargin)}</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
     `;
   }).join('');
+
+  const totalCost = products.reduce((sum, p) => {
+    return sum + (p.components || []).reduce((s, c) => s + Number(c.cost || 0), 0);
+  }, 0);
+
+  const totalSellAll = products.reduce((sum, p) => sum + Number(p.sellPrice || 0), 0);
 
   return `
     <div class="proposal-header proposal-print-header">
@@ -86,24 +123,10 @@ function renderInternalProposal(proposalDate, conceptDescription, valueAddDescri
     </div>
     <div class="proposal-section">
       <h3>Costing details</h3>
-      <p><strong>Quantity:</strong> ${Number(currentProject.quantity || 0).toLocaleString('en-ZA')}</p>
-      <p><strong>Total component cost (per unit):</strong> ${formatCurrency(totalComponentCost)}</p>
-      <p><strong>Total cost (all units):</strong> ${formatCurrency(totalComponentCost * (Number(currentProject.quantity) || 0))}</p>
-      <table class="proposal-table">
-        <thead>
-          <tr><th>Component</th><th>Cost</th></tr>
-        </thead>
-        <tbody>${componentRows}</tbody>
-        <tfoot>
-          <tr><td><strong>Total component cost</strong></td><td><strong>${formatCurrency(totalComponentCost)}</strong></td></tr>
-        </tfoot>
-      </table>
-      <table class="proposal-table proposal-table--prices">
-        <thead>
-          <tr><th>Option</th><th>Sell price</th><th>Margin (per unit)</th><th>Total sell</th><th>Total margin</th></tr>
-        </thead>
-        <tbody>${sellRows}</tbody>
-      </table>
+      <p><strong>Quantity:</strong> ${quantity.toLocaleString('en-ZA')}</p>
+      <p><strong>Total component cost (all products):</strong> ${formatCurrency(totalCost)}</p>
+      <p><strong>Total sell price (all products):</strong> ${formatCurrency(totalSellAll)}</p>
+      ${productSections}
     </div>
     <div class="proposal-footer">
       <div>
@@ -122,7 +145,10 @@ function renderInternalProposal(proposalDate, conceptDescription, valueAddDescri
   `;
 }
 
-function renderClientProposal(proposalDate, conceptDescription, valueAddDescription, images, bestOption) {
+function renderClientProposal(proposalDate, conceptDescription, valueAddDescription, images) {
+  const products = currentProject.products || [];
+  const totalSell = products.reduce((sum, p) => sum + Number(p.sellPrice || 0), 0);
+
   return `
     <div class="proposal-header proposal-print-header">
       <div class="proposal-brand">
@@ -161,8 +187,8 @@ function renderClientProposal(proposalDate, conceptDescription, valueAddDescript
     <div class="proposal-section">
       <h3>Recommended selling price</h3>
       <div class="client-price-card">
-        <p class="client-price-value" style="font-size:1.6rem;margin:0;">${formatCurrency(bestOption.price)}</p>
-        <p style="margin:0.25rem 0 0;color:var(--muted);">Recommended selling price (best option)</p>
+        <p class="client-price-value" style="font-size:1.6rem;margin:0;">${formatCurrency(totalSell)}</p>
+        <p style="margin:0.25rem 0 0;color:var(--muted);">Recommended selling price</p>
       </div>
     </div>
     <div class="proposal-footer">
@@ -181,13 +207,6 @@ function renderClientProposal(proposalDate, conceptDescription, valueAddDescript
   `;
 }
 
-function calculateMargin(cost, sell) {
-  const totalCost = Number(cost) || 0;
-  const totalSell = Number(sell) || 0;
-  if (!totalSell) return 0;
-  return Math.max(0, Math.round(((totalSell - totalCost) / totalSell) * 100));
-}
-
 function renderProposal() {
   const today = new Date();
   const proposalDate = today.toLocaleDateString('en-ZA', { day: '2-digit', month: 'short', year: 'numeric' });
@@ -196,22 +215,11 @@ function renderProposal() {
   const images = (currentProject.images || []).length
     ? currentProject.images.map((src) => `<div class="proposal-image"><img src="${src}" alt="${currentProject.name} photo" /></div>`).join('')
     : '<div class="proposal-image"><p style="padding:1rem;color:var(--muted);">No images uploaded yet.</p></div>';
-  const totalComponentCost = (currentProject.components || []).reduce((sum, item) => sum + Number(item.cost || 0), 0);
 
   if (currentProposalType === 'client') {
-    const bestOptionIndex = (currentProject.sellOptions || []).reduce((bestIdx, price, idx) => {
-      const currentMargin = price - totalComponentCost;
-      const bestMargin = (currentProject.sellOptions || [])[bestIdx] - totalComponentCost;
-      return currentMargin > bestMargin ? idx : bestIdx;
-    }, 0);
-    const bestOption = {
-      index: bestOptionIndex,
-      label: currentProject.sellLabels?.[bestOptionIndex] || `Option ${String.fromCharCode(65 + bestOptionIndex)}`,
-      price: currentProject.sellOptions?.[bestOptionIndex] || 0,
-    };
-    document.getElementById('proposalContent').innerHTML = renderClientProposal(proposalDate, conceptDescription, valueAddDescription, images, bestOption);
+    document.getElementById('proposalContent').innerHTML = renderClientProposal(proposalDate, conceptDescription, valueAddDescription, images);
   } else {
-    document.getElementById('proposalContent').innerHTML = renderInternalProposal(proposalDate, conceptDescription, valueAddDescription, images, totalComponentCost);
+    document.getElementById('proposalContent').innerHTML = renderInternalProposal(proposalDate, conceptDescription, valueAddDescription, images);
   }
 }
 
@@ -245,9 +253,7 @@ function initProposalPage() {
   }
 
   const printButton = document.getElementById('printProposalBtn');
-  if (printButton) {
-    printButton.addEventListener('click', () => window.print());
-  }
+  if (printButton) printButton.addEventListener('click', () => window.print());
 
   const logoutBtn = document.getElementById('logoutBtn');
   if (logoutBtn) logoutBtn.addEventListener('click', logout);

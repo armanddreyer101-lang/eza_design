@@ -113,45 +113,10 @@
         </div>
 
         <div class="detail-column">
-          <div class="card detail-card">
-            <div class="section-subtitle">Costing components</div>
-            <p class="text-muted">Build the product from components and track the total cost.</p>
-            <div class="components-table-wrapper">
-              <table class="components-table">
-                <thead>
-                  <tr>
-                    <th>Component</th>
-                    <th>Cost</th>
-                    <th></th>
-                  </tr>
-                </thead>
-                <tbody id="componentsBody"></tbody>
-              </table>
-            </div>
-            <button class="btn btn-primary btn-small" id="addComponentRow">Add component</button>
-            <div class="detail-summary-row">
-              <span>Total component cost</span>
-              <strong id="totalComponentCost">R 0</strong>
-            </div>
-          </div>
-
-          <div class="card detail-card">
-            <div class="section-subtitle">Sell price options</div>
-            <div class="price-option" id="priceOption1">
-              <input type="text" id="sellLabel1" class="sell-label-input" placeholder="Option A" />
-              <input type="number" id="sellOption1" min="0" />
-              <div class="price-margin" id="sellMargin1"><span class="margin-rand">R 0</span><span class="margin-percent">0%</span></div>
-            </div>
-            <div class="price-option" id="priceOption2">
-              <input type="text" id="sellLabel2" class="sell-label-input" placeholder="Option B" />
-              <input type="number" id="sellOption2" min="0" />
-              <div class="price-margin" id="sellMargin2"><span class="margin-rand">R 0</span><span class="margin-percent">0%</span></div>
-            </div>
-            <div class="price-option" id="priceOption3">
-              <input type="text" id="sellLabel3" class="sell-label-input" placeholder="Option C" />
-              <input type="number" id="sellOption3" min="0" />
-              <div class="price-margin" id="sellMargin3"><span class="margin-rand">R 0</span><span class="margin-percent">0%</span></div>
-            </div>
+          <div class="card detail-card" id="productsCard">
+            <div class="section-subtitle">Products</div>
+            <p class="text-muted">Manage products with components and pricing.</p>
+            <div id="productsContainer"></div>
           </div>
 
           <div class="card detail-card">

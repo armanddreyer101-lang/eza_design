@@ -15,13 +15,18 @@ const defaultProjects = [
     notes: 'Live tube plants displayed in a branded Checkers stand. 24 plants per stand. No soil required, just water. Easy care indoor plants.',
     valueAdd: '',
     images: [],
-    components: [
-      { name: 'Stand', cost: 10 },
-      { name: 'Tube', cost: 8 },
-      { name: 'Plant', cost: 7 },
+    products: [
+      {
+        id: 1,
+        name: 'Stand and Plant Kit',
+        components: [
+          { name: 'Stand', cost: 10 },
+          { name: 'Tube', cost: 8 },
+          { name: 'Plant', cost: 7 },
+        ],
+        sellPrice: 0,
+      },
     ],
-    sellOptions: [70, 80, 90],
-    sellLabels: ['Option A', 'Option B', 'Option C'],
     poDate: '',
     manufacturingDeadline: '',
     shippingDeadline: '',
@@ -39,9 +44,14 @@ const defaultProjects = [
     notes: 'Branded Checkers paper cup pot covers for nursery plants. Sizes: 10cm, 12cm, 14cm, 16cm, 16.5cm, 17cm, 19cm and larger.',
     valueAdd: '',
     images: [],
-    components: [],
-    sellOptions: [0, 0, 0],
-    sellLabels: ['Option A', 'Option B', 'Option C'],
+    products: [
+      {
+        id: 1,
+        name: 'Paper Cup',
+        components: [],
+        sellPrice: 0,
+      },
+    ],
     poDate: '',
     manufacturingDeadline: '',
     shippingDeadline: '',
@@ -266,7 +276,13 @@ function renderSummary() {
   projects.forEach(updateProjectOverdueStatus);
   const activeCount = projects.length;
   const overdueCount = projects.filter((project) => project.overdue).length;
-  const pipelineValue = projects.reduce((sum, project) => sum + (project.sellOptions[2] || 0), 0);
+  const pipelineValue = projects.reduce((sum, project) => {
+    // Get the highest sell price from all products
+    const maxSellPrice = project.products && project.products.length > 0
+      ? Math.max(...project.products.map(p => p.sellPrice || 0))
+      : 0;
+    return sum + (maxSellPrice * (project.quantity || 0));
+  }, 0);
 
   document.getElementById('activeCount').textContent = activeCount;
   document.getElementById('overdueCount').textContent = overdueCount;
@@ -300,8 +316,7 @@ function openProject(projectNumber) {
   document.getElementById('valueAddInput').value = currentProject.valueAdd;
 
   renderImagePreviews();
-  renderComponentsTable();
-  populateSellOptions();
+  renderProducts();
   renderTimeline();
   renderRecurringSection();
 }
@@ -345,6 +360,11 @@ function renderProjects() {
     row.classList.add('clickable-row');
     row.addEventListener('click', () => openProject(project.number));
 
+    // Get the highest sell price from products
+    const maxSellPrice = project.products && project.products.length > 0
+      ? Math.max(...project.products.map(p => p.sellPrice || 0))
+      : 0;
+
     row.innerHTML = `
       <td>
         <div class="project-name">
@@ -358,8 +378,8 @@ function renderProjects() {
         ${project.recurring ? '<span class="badge badge--recurring">Recurring</span>' : ''}
       </td>
       <td>${formatCurrency(project.targetCost)}</td>
-      <td>${formatCurrency(project.sellOptions[2] || 0)}</td>
-      <td>${calculateMargin(project.targetCost, project.sellOptions[2])}%</td>
+      <td>${formatCurrency(maxSellPrice)}</td>
+      <td>${calculateMargin(project.targetCost, maxSellPrice)}%</td>
       <td class="${project.overdue ? 'overdue' : ''}">${project.deadline}</td>
     `;
 
@@ -414,9 +434,7 @@ function handleNewProjectSubmit(event) {
     notes: '',
     valueAdd: '',
     images: [],
-    components: [],
-    sellOptions: [70, 80, 90],
-    sellLabels: ['Option A', 'Option B', 'Option C'],
+    products: [],
     poDate: '',
     manufacturingDeadline: '',
     shippingDeadline: '',
@@ -491,99 +509,185 @@ function saveImages() {
   }
 }loadProjects
 
-function renderComponentsTable() {
-  const body = document.getElementById('componentsBody');
-  body.innerHTML = '';
-
-  currentProject.components.forEach((component, index) => {
-    const row = document.createElement('tr');
-    row.innerHTML = `
-      <td><input type="text" value="${component.name}" /></td>
-      <td><input type="number" min="0" value="${component.cost}" /></td>
-      <td><button type="button" class="icon-btn">Remove</button></td>
+function renderProducts() {
+  if (!currentProject) return;
+  
+  const container = document.getElementById('productsContainer');
+  if (!container) return;
+  
+  container.innerHTML = '';
+  
+  // Ensure products array exists
+  if (!currentProject.products) {
+    currentProject.products = [];
+  }
+  
+  currentProject.products.forEach((product, productIndex) => {
+    const productDiv = document.createElement('div');
+    productDiv.className = 'product-section';
+    
+    // Product name and remove button
+    const headerDiv = document.createElement('div');
+    headerDiv.className = 'product-header';
+    headerDiv.innerHTML = `
+      <div class="product-title-input-wrapper">
+        <label>Product name</label>
+        <input type="text" class="product-name-input" value="${product.name || ''}" />
+      </div>
+      <button type="button" class="btn btn-danger btn-small">Remove product</button>
     `;
-
-    const nameInput = row.querySelector('input[type="text"]');
-    const costInput = row.querySelector('input[type="number"]');
-    const removeBtn = row.querySelector('button');
-
-    nameInput.addEventListener('input', (event) => {
-      currentProject.components[index].name = event.target.value;
-      saveProjects();
+    
+    const productNameInput = headerDiv.querySelector('.product-name-input');
+    const removeProductBtn = headerDiv.querySelector('.btn-danger');
+    
+    productNameInput.addEventListener('input', (event) => {
+      currentProject.products[productIndex].name = event.target.value;
+      saveProjects(projects);
+      showSavedIndicator();
     });
-
-    costInput.addEventListener('input', (event) => {
-      currentProject.components[index].cost = Number(event.target.value) || 0;
-      updateTotals();
-      saveProjects();
+    
+    removeProductBtn.addEventListener('click', () => {
+      currentProject.products.splice(productIndex, 1);
+      renderProducts();
+      saveProjects(projects);
+      showSavedIndicator();
     });
-
-    removeBtn.addEventListener('click', () => {
-      currentProject.components.splice(index, 1);
-      renderComponentsTable();
-      saveProjects();
+    
+    productDiv.appendChild(headerDiv);
+    
+    // Components table
+    const componentsDiv = document.createElement('div');
+    componentsDiv.className = 'product-components';
+    componentsDiv.innerHTML = `
+      <div class="section-subtitle">Components</div>
+      <div class="components-table-wrapper">
+        <table class="components-table">
+          <thead>
+            <tr>
+              <th>Component</th>
+              <th>Cost</th>
+              <th></th>
+            </tr>
+          </thead>
+          <tbody class="product-components-body"></tbody>
+        </table>
+      </div>
+      <button type="button" class="btn btn-primary btn-small add-component-btn">Add component</button>
+    `;
+    
+    const componentsTBody = componentsDiv.querySelector('.product-components-body');
+    const addComponentBtn = componentsDiv.querySelector('.add-component-btn');
+    
+    // Render component rows
+    product.components.forEach((component, compIndex) => {
+      const row = document.createElement('tr');
+      row.innerHTML = `
+        <td><input type="text" class="component-name-input" value="${component.name || ''}" /></td>
+        <td><input type="number" min="0" class="component-cost-input" value="${component.cost || 0}" /></td>
+        <td><button type="button" class="icon-btn remove-component-btn">Remove</button></td>
+      `;
+      
+      const nameInput = row.querySelector('.component-name-input');
+      const costInput = row.querySelector('.component-cost-input');
+      const removeBtn = row.querySelector('.remove-component-btn');
+      
+      nameInput.addEventListener('input', (event) => {
+        currentProject.products[productIndex].components[compIndex].name = event.target.value;
+        updateProductTotals(productIndex);
+        saveProjects(projects);
+        showSavedIndicator();
+      });
+      
+      costInput.addEventListener('input', (event) => {
+        currentProject.products[productIndex].components[compIndex].cost = Number(event.target.value) || 0;
+        updateProductTotals(productIndex);
+        saveProjects(projects);
+        showSavedIndicator();
+      });
+      
+      removeBtn.addEventListener('click', () => {
+        currentProject.products[productIndex].components.splice(compIndex, 1);
+        renderProducts();
+        saveProjects(projects);
+        showSavedIndicator();
+      });
+      
+      componentsTBody.appendChild(row);
     });
-
-    body.appendChild(row);
+    
+    addComponentBtn.addEventListener('click', () => {
+      currentProject.products[productIndex].components.push({ name: 'New component', cost: 0 });
+      renderProducts();
+      saveProjects(projects);
+      showSavedIndicator();
+    });
+    
+    productDiv.appendChild(componentsDiv);
+    
+    // Total component cost and sell price
+    const totalCost = product.components.reduce((sum, comp) => sum + Number(comp.cost || 0), 0);
+    
+    const costingDiv = document.createElement('div');
+    costingDiv.className = 'product-costing';
+    costingDiv.innerHTML = `
+      <div class="costing-row">
+        <span>Total component cost</span>
+        <strong class="total-component-cost">${formatCurrency(totalCost)}</strong>
+      </div>
+      <div class="costing-row sell-price-row">
+        <label for="product-sell-price-${productIndex}">Sell price</label>
+        <input type="number" id="product-sell-price-${productIndex}" class="sell-price-input" min="0" value="${product.sellPrice || 0}" />
+      </div>
+      <div class="costing-row margin-display">
+        <span>Margin</span>
+        <div class="margin-display-values">
+          <span class="margin-rand">${formatCurrency(Math.max(0, product.sellPrice - totalCost))}</span>
+          <span class="margin-percent">${calculateMargin(totalCost, product.sellPrice)}%</span>
+        </div>
+      </div>
+    `;
+    
+    const sellPriceInput = costingDiv.querySelector('.sell-price-input');
+    sellPriceInput.addEventListener('input', (event) => {
+      currentProject.products[productIndex].sellPrice = Number(event.target.value) || 0;
+      renderProducts();
+      saveProjects(projects);
+      showSavedIndicator();
+    });
+    
+    productDiv.appendChild(costingDiv);
+    
+    container.appendChild(productDiv);
   });
-
-  updateTotals();
-}
-
-function updateTotals() {
-  const totalCost = currentProject.components.reduce((sum, component) => sum + Number(component.cost || 0), 0);
-  document.getElementById('totalComponentCost').textContent = formatCurrency(totalCost);
-  document.getElementById('detailTargetCost').textContent = formatCurrency(currentProject.targetCost);
-  updateSellMargins(totalCost);
-}
-
-function populateSellOptions() {
-  document.getElementById('sellLabel1').value = currentProject.sellLabels?.[0] || 'Option A';
-  document.getElementById('sellLabel2').value = currentProject.sellLabels?.[1] || 'Option B';
-  document.getElementById('sellLabel3').value = currentProject.sellLabels?.[2] || 'Option C';
-  document.getElementById('sellOption1').value = currentProject.sellOptions[0];
-  document.getElementById('sellOption2').value = currentProject.sellOptions[1];
-  document.getElementById('sellOption3').value = currentProject.sellOptions[2];
-  updateTotals();
-}
-
-function getBestMarginIndex(values) {
-  return values.reduce((bestIndex, option, index) => {
-    if (option.marginValue > values[bestIndex].marginValue) {
-      return index;
-    }
-    return bestIndex;
-  }, 0);
-}
-
-function updateSellMargins(totalCost) {
-  const optionElements = [1, 2, 3].map((index) => ({
-    row: document.getElementById(`priceOption${index}`),
-    label: document.getElementById(`sellLabel${index}`),
-    input: document.getElementById(`sellOption${index}`),
-    output: document.getElementById(`sellMargin${index}`),
-  }));
-
-  const optionData = optionElements.map((elements, index) => {
-    const sellValue = Number(elements.input.value) || 0;
-    const labelValue = elements.label.value.trim() || `Option ${String.fromCharCode(65 + index)}`;
-    const marginValue = Math.max(0, sellValue - totalCost);
-    const marginPercent = calculateMargin(totalCost, sellValue);
-
-    currentProject.sellOptions[index] = sellValue;
-    currentProject.sellLabels = currentProject.sellLabels || ['Option A', 'Option B', 'Option C'];
-    currentProject.sellLabels[index] = labelValue;
-
-    elements.output.innerHTML = `<span class="margin-rand">${formatCurrency(marginValue)}</span><span class="margin-percent">${marginPercent}%</span>`;
-    elements.label.value = labelValue;
-
-    return { marginValue };
+  
+  // Add product button
+  const addProductBtnDiv = document.createElement('div');
+  addProductBtnDiv.className = 'add-product-button-wrapper';
+  const addProductBtn = document.createElement('button');
+  addProductBtn.type = 'button';
+  addProductBtn.className = 'btn btn-primary';
+  addProductBtn.textContent = 'Add product';
+  
+  addProductBtn.addEventListener('click', () => {
+    currentProject.products.push({
+      id: Date.now(),
+      name: 'New Product',
+      components: [],
+      sellPrice: 0,
+    });
+    renderProducts();
+    saveProjects(projects);
+    showSavedIndicator();
   });
+  
+  addProductBtnDiv.appendChild(addProductBtn);
+  container.appendChild(addProductBtnDiv);
+}
 
-  const bestIndex = getBestMarginIndex(optionData);
-  optionElements.forEach((elements, index) => {
-    elements.row.classList.toggle('best-margin', index === bestIndex);
-  });
+function updateProductTotals(productIndex) {
+  // This function recalculates and rerenders products with updated totals
+  if (!currentProject || !currentProject.products[productIndex]) return;
+  renderProducts();
 }
 
 function parseDate(dateString) {
@@ -815,22 +919,23 @@ function formatDisplayDate(dateString) {
   return date.toLocaleDateString('en-ZA', { day: '2-digit', month: 'short', year: 'numeric' });
 }
 
-function renderInternalProposal(proposalDate, conceptDescription, valueAddDescription, images, totalComponentCost) {
-  const componentRows = currentProject.components.map((component) => `
+function renderInternalProposal(proposalDate, conceptDescription, valueAddDescription, images, allComponents, totalComponentCost) {
+  const componentRows = allComponents.map((component) => `
       <tr>
         <td>${component.name}</td>
         <td>${formatCurrency(component.cost)}</td>
       </tr>
     `).join('');
-  const sellRows = currentProject.sellOptions.map((price, index) => {
-    const marginPerUnit = Math.max(0, price - totalComponentCost);
-    const marginPercent = calculateMargin(totalComponentCost, price);
-    const totalSell = (Number(price) || 0) * (Number(currentProject.quantity) || 0);
+  
+  const sellRows = currentProject.products.map((product) => {
+    const marginPerUnit = Math.max(0, (product.sellPrice || 0) - totalComponentCost);
+    const marginPercent = calculateMargin(totalComponentCost, product.sellPrice || 0);
+    const totalSell = (Number(product.sellPrice) || 0) * (Number(currentProject.quantity) || 0);
     const totalMargin = marginPerUnit * (Number(currentProject.quantity) || 0);
     return `
       <tr>
-        <td>${currentProject.sellLabels?.[index] || `Option ${String.fromCharCode(65 + index)}`}</td>
-        <td>${formatCurrency(price)} per unit</td>
+        <td>${product.name || 'Product'}</td>
+        <td>${formatCurrency(product.sellPrice || 0)} per unit</td>
         <td>${formatCurrency(marginPerUnit)} / ${marginPercent}% per unit</td>
         <td>${formatCurrency(totalSell)} (total)</td>
         <td>${formatCurrency(totalMargin)} (total margin)</td>
@@ -890,7 +995,7 @@ function renderInternalProposal(proposalDate, conceptDescription, valueAddDescri
       </table>
       <table class="proposal-table proposal-table--prices">
         <thead>
-          <tr><th>Option</th><th>Sell price</th><th>Margin (per unit)</th><th>Total sell</th><th>Total margin</th></tr>
+          <tr><th>Product</th><th>Sell price</th><th>Margin (per unit)</th><th>Total sell</th><th>Total margin</th></tr>
         </thead>
         <tbody>${sellRows}</tbody>
       </table>
@@ -912,14 +1017,7 @@ function renderInternalProposal(proposalDate, conceptDescription, valueAddDescri
   `;
 }
 
-function renderClientProposal(proposalDate, conceptDescription, valueAddDescription, images, bestOption) {
-  const otherOptions = currentProject.sellOptions.map((price, index) => `
-      <div class="client-price-row${index === bestOption.index ? ' best-client-option' : ''}">
-        <span>${currentProject.sellLabels?.[index] || `Option ${String.fromCharCode(65 + index)}`}</span>
-        <strong>${formatCurrency(price)}</strong>
-      </div>
-    `).join('');
-
+function renderClientProposal(proposalDate, conceptDescription, valueAddDescription, images, bestOption, allComponents) {
   return `
     <div class="proposal-header proposal-print-header">
       <div class="proposal-brand">
@@ -986,21 +1084,38 @@ function renderProposal() {
   const images = currentProject.images.length
     ? currentProject.images.map((src) => `<div class="proposal-image"><img src="${src}" alt="${currentProject.name} photo" /></div>`).join('')
     : '<div class="proposal-image"><p style="padding:1rem;color:var(--muted);">No images uploaded yet.</p></div>';
-  const totalComponentCost = currentProject.components.reduce((sum, item) => sum + Number(item.cost || 0), 0);
+  
+  // Get all components from all products
+  const allComponents = [];
+  if (currentProject.products && currentProject.products.length > 0) {
+    currentProject.products.forEach(product => {
+      if (product.components && product.components.length > 0) {
+        allComponents.push(...product.components);
+      }
+    });
+  }
+  const totalComponentCost = allComponents.reduce((sum, item) => sum + Number(item.cost || 0), 0);
+  
   if (currentProposalType === 'client') {
-    const bestOptionIndex = currentProject.sellOptions.reduce((bestIdx, price, idx) => {
-      const currentMargin = price - totalComponentCost;
-      const bestMargin = currentProject.sellOptions[bestIdx] - totalComponentCost;
-      return currentMargin > bestMargin ? idx : bestIdx;
-    }, 0);
+    // Get the best sell price from all products
+    let bestProduct = null;
+    let bestMargin = -Infinity;
+    if (currentProject.products && currentProject.products.length > 0) {
+      currentProject.products.forEach(product => {
+        const margin = (product.sellPrice || 0) - totalComponentCost;
+        if (margin > bestMargin) {
+          bestMargin = margin;
+          bestProduct = product;
+        }
+      });
+    }
     const bestOption = {
-      index: bestOptionIndex,
-      label: currentProject.sellLabels?.[bestOptionIndex] || `Option ${String.fromCharCode(65 + bestOptionIndex)}`,
-      price: currentProject.sellOptions[bestOptionIndex],
+      name: bestProduct?.name || 'Best Option',
+      price: bestProduct?.sellPrice || 0,
     };
-    document.getElementById('proposalContent').innerHTML = renderClientProposal(proposalDate, conceptDescription, valueAddDescription, images, bestOption);
+    document.getElementById('proposalContent').innerHTML = renderClientProposal(proposalDate, conceptDescription, valueAddDescription, images, bestOption, allComponents);
   } else {
-    document.getElementById('proposalContent').innerHTML = renderInternalProposal(proposalDate, conceptDescription, valueAddDescription, images, totalComponentCost);
+    document.getElementById('proposalContent').innerHTML = renderInternalProposal(proposalDate, conceptDescription, valueAddDescription, images, allComponents, totalComponentCost);
   }
 }
 
@@ -1161,57 +1276,6 @@ function wireDetailEvents() {
     renderProjects();
     renderSummary();
     saveProjects();
-  });
-
-  document.getElementById('addComponentRow').addEventListener('click', () => {
-    currentProject.components.push({ name: 'New component', cost: 0 });
-    renderComponentsTable();
-    saveProjects();
-  });
-
-  ['sellOption1', 'sellOption2', 'sellOption3'].forEach((id) => {
-    const el = document.getElementById(id);
-    if (el) {
-      el.addEventListener('input', (event) => {
-        if (!currentProject) return;
-        const idx = Number(id.replace('sellOption', '')) - 1;
-        currentProject.sellOptions = currentProject.sellOptions || [0, 0, 0];
-        currentProject.sellOptions[idx] = Number(event.target.value) || 0;
-        updateTotals();
-        saveProjects();
-      });
-    }
-  });
-
-  ['1', '2', '3'].forEach((num) => {
-    document.getElementById(`sellLabel${num}`).addEventListener('input', (event) => {
-      if (!currentProject) return;
-      currentProject.sellLabels = currentProject.sellLabels || ['Option A', 'Option B', 'Option C'];
-      currentProject.sellLabels[num - 1] = event.target.value;
-      updateTotals();
-      saveProjects();
-    });
-  });
-
-  // Additional safeguard: ensure all sell inputs/labels are synced to the project
-  function syncSellFields() {
-    if (!currentProject) return;
-    currentProject.sellOptions = currentProject.sellOptions || [0, 0, 0];
-    currentProject.sellLabels = currentProject.sellLabels || ['Option A', 'Option B', 'Option C'];
-    for (let i = 1; i <= 3; i++) {
-      const valEl = document.getElementById(`sellOption${i}`);
-      const labelEl = document.getElementById(`sellLabel${i}`);
-      if (valEl) currentProject.sellOptions[i - 1] = Number(valEl.value) || 0;
-      if (labelEl) currentProject.sellLabels[i - 1] = labelEl.value || currentProject.sellLabels[i - 1];
-    }
-    updateTotals();
-    saveProjects();
-  }
-
-  ['sellOption1', 'sellOption2', 'sellOption3', 'sellLabel1', 'sellLabel2', 'sellLabel3'].forEach((id) => {
-    const el = document.getElementById(id);
-    if (!el) return;
-    el.addEventListener('blur', syncSellFields);
   });
 
   document.getElementById('advanceStageBtn').addEventListener('click', () => {
