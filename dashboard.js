@@ -36,12 +36,10 @@ function calculateMargin(cost, sell) {
   return Math.max(0, Math.round(((totalSell - totalCost) / totalSell) * 100));
 }
 
-// Get total sell price for a project (sum of all product sell prices)
 function getProjectSellPrice(project) {
   return (project.products || []).reduce((sum, p) => sum + Number(p.sellPrice || 0), 0);
 }
 
-// Get total component cost for a project (sum of all products' component costs)
 function getProjectTotalCost(project) {
   return (project.products || []).reduce((sum, p) => {
     return sum + (p.components || []).reduce((s, c) => s + Number(c.cost || 0), 0);
@@ -52,7 +50,6 @@ function renderSummary() {
   const activeCount = projects.length;
   const overdueCount = projects.filter((project) => project.overdue).length;
   const pipelineValue = projects.reduce((sum, project) => sum + getProjectSellPrice(project), 0);
-
   document.getElementById('activeCount').textContent = activeCount;
   document.getElementById('overdueCount').textContent = overdueCount;
   document.getElementById('pipelineValue').textContent = formatCurrency(pipelineValue);
@@ -65,12 +62,10 @@ function openProject(projectNumber) {
 function renderProjects() {
   const rows = document.getElementById('projectRows');
   rows.innerHTML = '';
-
   projects.forEach((project) => {
     const sellPrice = getProjectSellPrice(project);
     const totalCost = getProjectTotalCost(project);
     const margin = calculateMargin(totalCost, sellPrice);
-
     const row = document.createElement('tr');
     row.classList.add('clickable-row');
     row.addEventListener('click', () => openProject(project.number));
@@ -111,19 +106,17 @@ function closeAddProjectForm() {
   document.getElementById('newProjectForm').reset();
 }
 
-function handleNewProjectSubmit(event) {
+async function handleNewProjectSubmit(event) {
   event.preventDefault();
   const name = document.getElementById('newProjectName').value.trim();
   const category = document.getElementById('newProjectCategory').value;
   const targetCost = Number(document.getElementById('newProjectTargetCost').value) || 0;
   const quantity = Number(document.getElementById('newProjectQuantity').value) || 0;
   const deadline = document.getElementById('newProjectDeadline').value;
-
   if (!name || !category || !deadline) {
     alert('Please complete all fields before creating the project.');
     return;
   }
-
   const newProject = {
     number: calculateNextProjectNumber(),
     name,
@@ -142,9 +135,8 @@ function handleNewProjectSubmit(event) {
     deliveryDate: '',
     images: [],
   };
-
   projects.push(newProject);
-  saveProjects(projects);
+  await saveProjects(projects);
   showSavedIndicator();
   renderProjects();
   renderSummary();
@@ -155,15 +147,14 @@ function wireDashboardEvents() {
   document.getElementById('addProjectBtn').addEventListener('click', openAddProjectForm);
   document.getElementById('cancelNewProjectBtn').addEventListener('click', closeAddProjectForm);
   document.getElementById('newProjectForm').addEventListener('submit', handleNewProjectSubmit);
-
   const logoutBtn = document.getElementById('logoutBtn');
   if (logoutBtn) logoutBtn.addEventListener('click', logout);
 }
 
-function initDashboard() {
+async function initDashboard() {
   if (!redirectIfNotAuthenticated()) return;
   updateTopbarUserInfo();
-  projects = loadProjects();
+  projects = await loadProjects();
   renderSummary();
   renderProjects();
   wireDashboardEvents();

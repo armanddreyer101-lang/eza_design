@@ -32,168 +32,29 @@
 
   <main class="page">
     <section class="card detail-view" id="detailView">
+
       <div class="detail-nav">
         <button class="btn nav-btn" id="backToDashboard">← Back to Dashboard</button>
         <button class="btn nav-btn" id="prevProjectBtn">← Previous Project</button>
         <button class="btn nav-btn" id="nextProjectBtn">Next Project →</button>
       </div>
 
-      <div class="section-header detail-header">
-        <div>
-          <input type="text" id="detailProjectName" class="detail-title-input" />
-          <p id="detailProjectMeta">Project number, category and stage</p>
+      <!-- Edit bar -->
+      <div class="edit-bar" id="editBar">
+        <div class="edit-bar__left">
+          <h2 id="editBarTitle"></h2>
+          <span id="editBarMeta"></span>
+        </div>
+        <div class="edit-bar__right">
+          <button class="btn btn-primary" id="editBtn">✏️ Edit Project</button>
+          <button class="btn btn-primary hidden" id="saveBtn">💾 Save Changes</button>
+          <button class="btn btn-secondary hidden" id="cancelBtn">Cancel</button>
         </div>
       </div>
 
-      <div class="detail-grid">
-        <div class="detail-column">
-          <div class="card detail-card">
-            <div class="detail-row">
-              <div>
-                <p class="card__label">Project</p>
-                <h3 id="detailNumber">P-000</h3>
-              </div>
-              <div>
-                <p class="card__label">Stage</p>
-                <div class="stage-picker">
-                  <span class="badge clickable" id="detailStageBadge">Concept</span>
-                  <select id="detailStageSelect" class="stage-dropdown hidden">
-                    <option value="Concept">Concept</option>
-                    <option value="Proposal Sent">Proposal Sent</option>
-                    <option value="Samples">Samples</option>
-                    <option value="Order Placed">Order Placed</option>
-                    <option value="Recurring Order">Recurring Order</option>
-                  </select>
-                </div>
-              </div>
-            </div>
-            <div class="detail-row">
-              <div>
-                <p class="card__label">Category</p>
-                <p id="detailCategory">Plants</p>
-              </div>
-              <div>
-                <p class="card__label">Target cost</p>
-                <p id="detailTargetCost">R 0</p>
-              </div>
-            </div>
-            <div class="detail-row">
-              <div>
-                <p class="card__label">Quantity</p>
-                <input type="number" id="detailQuantity" min="0" step="1" />
-              </div>
-            </div>
-            <div class="detail-row">
-              <div>
-                <p class="card__label">Deadline</p>
-                <input type="date" id="detailDeadline" />
-              </div>
-            </div>
-          </div>
+      <!-- Page content rendered by JS -->
+      <div id="projectContent"></div>
 
-          <div class="card detail-card">
-            <div class="section-subtitle">Product photos</div>
-            <p class="text-muted">Upload multiple images for the project product.</p>
-            <label class="file-upload">
-              <input type="file" id="imageUpload" accept="image/*" multiple />
-              Choose images
-            </label>
-            <div class="image-preview-grid" id="imagePreviews"></div>
-          </div>
-
-          <div class="card detail-card">
-            <div class="section-subtitle">Concept notes</div>
-            <textarea id="conceptNotesInput" placeholder="Type the idea, inspiration and product purpose..."></textarea>
-          </div>
-
-          <div class="card detail-card">
-            <div class="section-subtitle">Value add description</div>
-            <textarea id="valueAddInput" placeholder="Describe the customer benefit and product value add..."></textarea>
-          </div>
-        </div>
-
-        <div class="detail-column">
-          <div class="card detail-card" id="productsCard">
-            <div class="section-subtitle">Products</div>
-            <p class="text-muted">Manage products with components and pricing.</p>
-            <div id="productsContainer"></div>
-          </div>
-
-          <div class="card detail-card">
-            <div class="section-subtitle">Timeline tracker</div>
-            <p class="text-muted">Enter the PO date and the tracker calculates manufacturing, shipping and delivery dates.</p>
-            <div class="timeline-row">
-              <label>PO date</label>
-              <input type="date" id="poDate" />
-            </div>
-            <div class="timeline-row timeline-row--details">
-              <div class="timeline-item">
-                <label>Manufacturing deadline</label>
-                <div class="timeline-field-row">
-                  <input type="date" id="manufacturingDeadline" />
-                  <span class="timeline-status" id="manufacturingStatus"></span>
-                </div>
-              </div>
-              <div class="timeline-item">
-                <label>Shipping deadline</label>
-                <div class="timeline-field-row">
-                  <input type="date" id="shippingDeadline" />
-                  <span class="timeline-status" id="shippingStatus"></span>
-                </div>
-              </div>
-              <div class="timeline-item">
-                <label>Delivery date</label>
-                <div class="timeline-field-row">
-                  <input type="date" id="deliveryDate" />
-                  <span class="timeline-status" id="deliveryStatus"></span>
-                </div>
-              </div>
-            </div>
-            <div class="timeline-bar" id="timelineBar">
-              <div class="timeline-step" id="stepManufacturing">Manufacturing</div>
-              <div class="timeline-step" id="stepShipping">Shipping</div>
-              <div class="timeline-step" id="stepDelivery">Delivery</div>
-            </div>
-          </div>
-
-          <div class="card detail-card">
-            <div class="section-subtitle">Proposal</div>
-            <p class="text-muted">Create a professional proposal page for Shoprite Checkers.</p>
-            <div class="detail-actions">
-              <button class="btn btn-secondary" id="generateProposalBtn">Internal Proposal</button>
-              <button class="btn btn-primary" id="sendClientProposalBtn">Send to Client</button>
-            </div>
-          </div>
-
-          <div class="card detail-card">
-            <div class="section-subtitle">Project progress</div>
-            <p class="text-muted">Move the project to the next stage when ready.</p>
-            <button class="btn btn-primary" id="advanceStageBtn">Advance to next stage</button>
-          </div>
-
-          <div class="card detail-card recurring-card hidden" id="recurringSection">
-            <div class="section-subtitle">Recurring orders</div>
-            <p class="text-muted">Convert approved projects into regular monthly or yearly orders.</p>
-            <div id="recurringEmpty">
-              <button class="btn btn-primary" id="convertToRecurringBtn">Convert to Recurring Order</button>
-            </div>
-            <div id="recurringDetails" class="hidden">
-              <div class="recurring-grid">
-                <div class="order-summary-item"><p><strong>Frequency</strong></p><p id="recurringFrequency">-</p></div>
-                <div class="order-summary-item"><p><strong>Quantity per cycle</strong></p><p id="recurringQuantity">-</p></div>
-                <div class="order-summary-item"><p><strong>Unit cost</strong></p><p id="recurringUnitCost">-</p></div>
-                <div class="order-summary-item"><p><strong>Total order value</strong></p><p id="recurringTotalValue">-</p></div>
-                <div class="order-summary-item"><p><strong>Next order due</strong></p><p id="recurringNextDue">-</p></div>
-              </div>
-              <button class="btn btn-primary" id="placeNextOrderBtn">Place Next Order</button>
-              <div class="proposal-section">
-                <h3>Order history</h3>
-                <ul class="recurring-history" id="recurringHistoryList"></ul>
-              </div>
-            </div>
-          </div>
-        </div>
-      </div>
     </section>
   </main>
 

@@ -12,66 +12,62 @@ function parseQueryParam(name) {
   return new URLSearchParams(window.location.search).get(name);
 }
 
-function parseDate(dateString) {
-  if (!dateString) return null;
-  const value = new Date(dateString);
-  return Number.isNaN(value.getTime()) ? null : value;
+function parseDate(str) {
+  if (!str) return null;
+  const d = new Date(str);
+  return isNaN(d.getTime()) ? null : d;
 }
 
-function formatDisplayDate(dateString) {
-  const date = parseDate(dateString);
-  if (!date) return 'Not set';
-  return date.toLocaleDateString('en-ZA', { day: '2-digit', month: 'short', year: 'numeric' });
+function formatDisplayDate(str) {
+  const d = parseDate(str);
+  if (!d) return 'Not set';
+  return d.toLocaleDateString('en-ZA', { day: '2-digit', month: 'short', year: 'numeric' });
 }
 
 function calculateMargin(cost, sell) {
-  const totalCost = Number(cost) || 0;
-  const totalSell = Number(sell) || 0;
-  if (!totalSell) return 0;
-  return Math.max(0, Math.round(((totalSell - totalCost) / totalSell) * 100));
+  const c = Number(cost) || 0;
+  const s = Number(sell) || 0;
+  if (!s) return 0;
+  return Math.max(0, Math.round(((s - c) / s) * 100));
 }
 
-function renderInternalProposal(proposalDate, conceptDescription, valueAddDescription, images) {
-  const products = currentProject.products || [];
-  const quantity = Number(currentProject.quantity) || 0;
+function renderInternalProposal() {
+  const p = currentProject;
+  const products = p.products || [];
+  const quantity = Number(p.quantity) || 0;
+  const today = new Date().toLocaleDateString('en-ZA', { day: '2-digit', month: 'short', year: 'numeric' });
 
-  const productSections = products.map((product) => {
-    const productCost = (product.components || []).reduce((sum, c) => sum + Number(c.cost || 0), 0);
-    const sellPrice = Number(product.sellPrice) || 0;
-    const marginPerUnit = Math.max(0, sellPrice - productCost);
-    const marginPercent = calculateMargin(productCost, sellPrice);
-    const totalSell = sellPrice * quantity;
-    const totalMargin = marginPerUnit * quantity;
+  const totalCost = products.reduce((sum, prod) => sum + (prod.components || []).reduce((s, c) => s + Number(c.cost || 0), 0), 0);
+  const totalSell = products.reduce((sum, prod) => sum + Number(prod.sellPrice || 0), 0);
 
-    const componentRows = (product.components || []).map((c) => `
-      <tr>
-        <td>${c.name}</td>
-        <td>${formatCurrency(c.cost)}</td>
-      </tr>
+  const productSections = products.map((prod) => {
+    const prodCost = (prod.components || []).reduce((s, c) => s + Number(c.cost || 0), 0);
+    const sellPrice = Number(prod.sellPrice) || 0;
+    const marginRand = Math.max(0, sellPrice - prodCost);
+    const marginPercent = calculateMargin(prodCost, sellPrice);
+    const totalSellProd = sellPrice * quantity;
+    const totalMarginProd = marginRand * quantity;
+
+    const compRows = (prod.components || []).map((c) => `
+      <tr><td>${c.name}</td><td>${formatCurrency(c.cost)}</td></tr>
     `).join('');
 
     return `
-      <div class="proposal-product-block">
-        <h4>${product.name}</h4>
+      <div class="proposal-product-block" style="margin-bottom:1.5rem;">
+        <h4 style="margin-bottom:0.5rem;">${prod.name}</h4>
         <table class="proposal-table">
-          <thead>
-            <tr><th>Component</th><th>Cost</th></tr>
-          </thead>
-          <tbody>${componentRows || '<tr><td colspan="2">No components added.</td></tr>'}</tbody>
-          <tfoot>
-            <tr><td><strong>Total component cost</strong></td><td><strong>${formatCurrency(productCost)}</strong></td></tr>
-          </tfoot>
+          <thead><tr><th>Component</th><th>Cost</th></tr></thead>
+          <tbody>${compRows || '<tr><td colspan="2">No components.</td></tr>'}</tbody>
+          <tfoot><tr><td><strong>Total cost</strong></td><td><strong>${formatCurrency(prodCost)}</strong></td></tr></tfoot>
         </table>
-        <table class="proposal-table proposal-table--prices" style="margin-top:0.75rem;">
-          <thead>
-            <tr><th>Sell price</th><th>Margin per unit</th><th>Total sell</th><th>Total margin</th></tr>
-          </thead>
+        <table class="proposal-table proposal-table--prices" style="margin-top:0.5rem;">
+          <thead><tr><th>Sell price</th><th>Margin/unit</th><th>Total sell</th><th>Total margin</th></tr></thead>
           <tbody>
             <tr>
               <td>${formatCurrency(sellPrice)}</td>
-              <td>${formatCurrency(marginPerUnit)} / ${marginPercent}%</td>
-              <td>${formatCurrency(totalSell)}</td>
-              <td>${formatCurrency(totalMargin)}</td>
+              <td>${formatCurrency(marginRand)} / ${marginPercent}%</td>
+              <td>${formatCurrency(totalSellProd)}</td>
+              <td>${formatCurrency(totalMarginProd)}</td>
             </tr>
           </tbody>
         </table>
@@ -79,24 +75,19 @@ function renderInternalProposal(proposalDate, conceptDescription, valueAddDescri
     `;
   }).join('');
 
-  const totalCost = products.reduce((sum, p) => {
-    return sum + (p.components || []).reduce((s, c) => s + Number(c.cost || 0), 0);
-  }, 0);
-
-  const totalSellAll = products.reduce((sum, p) => sum + Number(p.sellPrice || 0), 0);
+  const images = (p.images || []).length
+    ? p.images.map((src) => `<div class="proposal-image"><img src="${src}" alt="${p.name}" /></div>`).join('')
+    : '<p style="color:var(--muted)">No images uploaded.</p>';
 
   return `
     <div class="proposal-header proposal-print-header">
       <div class="proposal-brand">
         <div class="brand__mark">EZA</div>
-        <div>
-          <h2>EZA Design</h2>
-          <p>Design Studio</p>
-        </div>
+        <div><h2>EZA Design</h2><p>Design Studio</p></div>
       </div>
       <div class="proposal-date-block">
         <p class="proposal-date-label">Date</p>
-        <p class="proposal-date-value">${proposalDate}</p>
+        <p class="proposal-date-value">${today}</p>
       </div>
     </div>
     <div class="proposal-address-block">
@@ -106,16 +97,16 @@ function renderInternalProposal(proposalDate, conceptDescription, valueAddDescri
       <p>Shoprite Checkers</p>
     </div>
     <div class="proposal-section">
-      <h1 class="proposal-title">${currentProject.name}</h1>
-      <p class="proposal-subtitle">${currentProject.category}</p>
+      <h1 class="proposal-title">${p.name}</h1>
+      <p class="proposal-subtitle">${p.category}</p>
     </div>
     <div class="proposal-section">
       <h3>Concept notes</h3>
-      <p>${conceptDescription}</p>
+      <p>${p.notes || 'No concept notes added.'}</p>
     </div>
     <div class="proposal-section">
       <h3>Value add description</h3>
-      <p>${valueAddDescription}</p>
+      <p>${p.valueAdd || 'No value-add description entered.'}</p>
     </div>
     <div class="proposal-section">
       <h3>Product images</h3>
@@ -124,8 +115,8 @@ function renderInternalProposal(proposalDate, conceptDescription, valueAddDescri
     <div class="proposal-section">
       <h3>Costing details</h3>
       <p><strong>Quantity:</strong> ${quantity.toLocaleString('en-ZA')}</p>
-      <p><strong>Total component cost (all products):</strong> ${formatCurrency(totalCost)}</p>
-      <p><strong>Total sell price (all products):</strong> ${formatCurrency(totalSellAll)}</p>
+      <p><strong>Total component cost:</strong> ${formatCurrency(totalCost)}</p>
+      <p><strong>Total sell price:</strong> ${formatCurrency(totalSell)}</p>
       ${productSections}
     </div>
     <div class="proposal-footer">
@@ -145,22 +136,25 @@ function renderInternalProposal(proposalDate, conceptDescription, valueAddDescri
   `;
 }
 
-function renderClientProposal(proposalDate, conceptDescription, valueAddDescription, images) {
-  const products = currentProject.products || [];
-  const totalSell = products.reduce((sum, p) => sum + Number(p.sellPrice || 0), 0);
+function renderClientProposal() {
+  const p = currentProject;
+  const products = p.products || [];
+  const totalSell = products.reduce((sum, prod) => sum + Number(prod.sellPrice || 0), 0);
+  const today = new Date().toLocaleDateString('en-ZA', { day: '2-digit', month: 'short', year: 'numeric' });
+
+  const images = (p.images || []).length
+    ? p.images.map((src) => `<div class="proposal-image"><img src="${src}" alt="${p.name}" /></div>`).join('')
+    : '<p style="color:var(--muted)">No images uploaded.</p>';
 
   return `
     <div class="proposal-header proposal-print-header">
       <div class="proposal-brand">
         <div class="brand__mark">EZA</div>
-        <div>
-          <h2>EZA Design</h2>
-          <p>Design Studio</p>
-        </div>
+        <div><h2>EZA Design</h2><p>Design Studio</p></div>
       </div>
       <div class="proposal-date-block">
         <p class="proposal-date-label">Date</p>
-        <p class="proposal-date-value">${proposalDate}</p>
+        <p class="proposal-date-value">${today}</p>
       </div>
     </div>
     <div class="proposal-address-block">
@@ -169,8 +163,8 @@ function renderClientProposal(proposalDate, conceptDescription, valueAddDescript
       <p>Shoprite Checkers</p>
     </div>
     <div class="proposal-section">
-      <h1 class="proposal-title">${currentProject.name}</h1>
-      <p class="proposal-subtitle">${currentProject.category}</p>
+      <h1 class="proposal-title">${p.name}</h1>
+      <p class="proposal-subtitle">${p.category}</p>
     </div>
     <div class="proposal-section">
       <h3>Product images</h3>
@@ -178,16 +172,16 @@ function renderClientProposal(proposalDate, conceptDescription, valueAddDescript
     </div>
     <div class="proposal-section">
       <h3>Concept summary</h3>
-      <p>${conceptDescription}</p>
+      <p>${p.notes || 'No concept notes added.'}</p>
     </div>
     <div class="proposal-section">
       <h3>Value add</h3>
-      <p>${valueAddDescription}</p>
+      <p>${p.valueAdd || 'No value-add description entered.'}</p>
     </div>
     <div class="proposal-section">
       <h3>Recommended selling price</h3>
       <div class="client-price-card">
-        <p class="client-price-value" style="font-size:1.6rem;margin:0;">${formatCurrency(totalSell)}</p>
+        <p style="font-size:1.6rem;margin:0;">${formatCurrency(totalSell)}</p>
         <p style="margin:0.25rem 0 0;color:var(--muted);">Recommended selling price</p>
       </div>
     </div>
@@ -207,53 +201,34 @@ function renderClientProposal(proposalDate, conceptDescription, valueAddDescript
   `;
 }
 
-function renderProposal() {
-  const today = new Date();
-  const proposalDate = today.toLocaleDateString('en-ZA', { day: '2-digit', month: 'short', year: 'numeric' });
-  const conceptDescription = currentProject.notes || 'No concept notes added yet.';
-  const valueAddDescription = currentProject.valueAdd || 'No value-add description entered.';
-  const images = (currentProject.images || []).length
-    ? currentProject.images.map((src) => `<div class="proposal-image"><img src="${src}" alt="${currentProject.name} photo" /></div>`).join('')
-    : '<div class="proposal-image"><p style="padding:1rem;color:var(--muted);">No images uploaded yet.</p></div>';
-
-  if (currentProposalType === 'client') {
-    document.getElementById('proposalContent').innerHTML = renderClientProposal(proposalDate, conceptDescription, valueAddDescription, images);
-  } else {
-    document.getElementById('proposalContent').innerHTML = renderInternalProposal(proposalDate, conceptDescription, valueAddDescription, images);
-  }
-}
-
-function initProposalPage() {
+async function initProposalPage() {
   if (!redirectIfNotAuthenticated()) return;
   updateTopbarUserInfo();
 
   const projectNumber = parseQueryParam('project');
   const proposalType = parseQueryParam('type');
-  if (!projectNumber) {
-    window.location.href = 'dashboard.html';
-    return;
-  }
+  if (!projectNumber) { window.location.href = 'dashboard.html'; return; }
 
   currentProposalType = proposalType === 'client' ? 'client' : 'internal';
-  const projects = loadProjects();
-  currentProject = projects.find((project) => project.number === projectNumber);
-  if (!currentProject) {
-    window.location.href = 'dashboard.html';
-    return;
-  }
+
+  const projects = await loadProjects();
+  currentProject = projects.find((p) => p.number === projectNumber);
+  if (!currentProject) { window.location.href = 'dashboard.html'; return; }
+
   currentProject.images = loadProjectImages(currentProject.number) || [];
 
-  renderProposal();
-
-  const backToDetailButton = document.getElementById('backToDetail');
-  if (backToDetailButton) {
-    backToDetailButton.addEventListener('click', () => {
-      window.location.href = `project.html?project=${encodeURIComponent(currentProject.number)}`;
-    });
+  const content = document.getElementById('proposalContent');
+  if (content) {
+    content.innerHTML = currentProposalType === 'client' ? renderClientProposal() : renderInternalProposal();
   }
 
-  const printButton = document.getElementById('printProposalBtn');
-  if (printButton) printButton.addEventListener('click', () => window.print());
+  const backBtn = document.getElementById('backToDetail');
+  if (backBtn) backBtn.addEventListener('click', () => {
+    window.location.href = `project.html?project=${encodeURIComponent(currentProject.number)}`;
+  });
+
+  const printBtn = document.getElementById('printProposalBtn');
+  if (printBtn) printBtn.addEventListener('click', () => window.print());
 
   const logoutBtn = document.getElementById('logoutBtn');
   if (logoutBtn) logoutBtn.addEventListener('click', logout);

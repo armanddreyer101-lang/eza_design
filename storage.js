@@ -1,106 +1,97 @@
-const STORAGE_KEY = 'ezaDesignProjects';
+import { supabase } from './supabase.js';
+
 const IMAGE_STORAGE_KEY = 'ezaDesignImages';
+const SUPABASE_URL = 'https://ebyfnbpgskyjedoocqha.supabase.co';
+const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImVieWZuYnBnc2t5amVkb29jcWhhIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Nzk4OTQ4OTUsImV4cCI6MjA5NTQ3MDg5NX0.ifq0NezBiSxxdHcxyTbSjhtjWHipkM8i1znpWw9kLys';
 
-const defaultProjects = [
-  {
-    number: 'P-001',
-    name: 'Checkers Stand and Plants',
-    category: 'Plants',
-    stage: 'Concept',
-    targetCost: 25,
-    quantity: 80000,
-    deadline: '',
-    overdue: false,
-    notes: 'Live tube plants displayed in a branded Checkers stand. 24 plants per stand. No soil required, just water. Easy care indoor plants.',
-    valueAdd: '',
-    products: [
-      {
-        id: 1,
-        name: 'Stand and Plant Kit',
-        components: [
-          { name: 'Stand', cost: 10 },
-          { name: 'Tube', cost: 8 },
-          { name: 'Plant', cost: 7 },
-        ],
-        sellPrice: 0,
-      },
-    ],
-    poDate: '',
-    manufacturingDeadline: '',
-    shippingDeadline: '',
-    deliveryDate: '',
-  },
-  {
-    number: 'P-002',
-    name: 'Paper Cup Packaging',
-    category: 'Paper Cups',
-    stage: 'Concept',
-    targetCost: 0,
-    quantity: 10000,
-    deadline: '',
-    overdue: false,
-    notes: 'Branded Checkers paper cup pot covers for nursery plants. Sizes: 10cm, 12cm, 14cm, 16cm, 16.5cm, 17cm, 19cm and larger.',
-    valueAdd: '',
-    products: [
-      {
-        id: 1,
-        name: 'Paper Cup',
-        components: [],
-        sellPrice: 0,
-      },
-    ],
-    poDate: '',
-    manufacturingDeadline: '',
-    shippingDeadline: '',
-    deliveryDate: '',
-  },
-];
+const HEADERS = {
+  'apikey': SUPABASE_KEY,
+  'Authorization': `Bearer ${SUPABASE_KEY}`,
+  'Content-Type': 'application/json',
+};
 
-function parseStoredData(key) {
-  const stored = localStorage.getItem(key);
-  if (!stored) return null;
+async function fetchJSON(url, options = {}) {
+  const res = await fetch(url, { ...options, headers: { ...HEADERS, ...(options.headers || {}) } });
+  const text = await res.text();
+  if (!res.ok) throw new Error(`Supabase error ${res.status}: ${text}`);
+  return text ? JSON.parse(text) : [];
+}
+
+// ─── PROJECTS ───
+
+export async function loadProjects() {
   try {
-    return JSON.parse(stored);
+    const rows = await fetchJSON(`${SUPABASE_URL}/rest/v1/projects?select=*`);
+    if (!rows || rows.length === 0) return [];
+    return rows.map((row) => ({
+      ...row.data,
+      number: row.number,
+      images: loadProjectImagesLocal(row.number),
+    }));
   } catch (error) {
-    console.warn(`Invalid JSON in ${key}:`, error);
-    return null;
+    console.error('Failed to load projects:', error);
+    return [];
   }
 }
 
-function createProjectCopy(project) {
-  const { images, ...rest } = project;
-  return { ...rest };
+export async function saveProject(project) {
+  try {
+    const { images, ...data } = project;
+
+    // Check if row exists
+    const existing = await fetchJSON(`${SUPABASE_URL}/rest/v1/projects?number=eq.${encodeURIComponent(project.number)}&select=id`);
+
+    if (existing && existing.length > 0) {
+      // UPDATE
+      await fetchJSON(`${SUPABASE_URL}/rest/v1/projects?number=eq.${encodeURIComponent(project.number)}`, {
+        method: 'PATCH',
+        headers: { 'Prefer': 'return=minimal' },
+        body: JSON.stringify({ data }),
+      });
+    } else {
+      // INSERT
+      await fetchJSON(`${SUPABASE_URL}/rest/v1/projects`, {
+        method: 'POST',
+        headers: { 'Prefer': 'return=minimal' },
+        body: JSON.stringify({ number: project.number, data }),
+      });
+    }
+  } catch (error) {
+    console.error('Failed to save project:', error);
+  }
 }
+
+export async function saveProjects(projects) {
+  for (const project of projects) {
+    await saveProject(project);
+  }
+}
+
+export async function deleteProject(number) {
+  try {
+    await fetchJSON(`${SUPABASE_URL}/rest/v1/projects?number=eq.${encodeURIComponent(number)}`, {
+      method: 'DELETE',
+      headers: { 'Prefer': 'return=minimal' },
+    });
+  } catch (error) {
+    console.error('Failed to delete project:', error);
+  }
+}
+
+// ─── IMAGES (localStorage — too large for Supabase free tier) ───
 
 function loadAllProjectImages() {
-  const imageMap = parseStoredData(IMAGE_STORAGE_KEY);
-  return imageMap && typeof imageMap === 'object' ? imageMap : {};
+  const stored = localStorage.getItem(IMAGE_STORAGE_KEY);
+  if (!stored) return {};
+  try { return JSON.parse(stored); } catch { return {}; }
 }
 
-export function loadProjects() {
-  const stored = parseStoredData(STORAGE_KEY);
-  if (!Array.isArray(stored)) {
-    const initialProjects = defaultProjects.map((project) => ({ ...project }));
-    saveProjects(initialProjects);
-    return initialProjects.map((project) => ({ ...project, images: [] }));
-  }
-
-  const imageMap = loadAllProjectImages();
-  return stored.map((project) => ({ ...project, images: imageMap[project.number] || [] }));
-}
-
-export function saveProjects(projects) {
-  const projectsToSave = projects.map(createProjectCopy);
-  try {
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(projectsToSave));
-  } catch (error) {
-    console.error('Unable to save project data:', error);
-  }
+function loadProjectImagesLocal(projectNumber) {
+  return loadAllProjectImages()[projectNumber] || [];
 }
 
 export function loadProjectImages(projectNumber) {
-  const imageMap = loadAllProjectImages();
-  return imageMap[projectNumber] || [];
+  return loadProjectImagesLocal(projectNumber);
 }
 
 export function saveProjectImages(projectNumber, images) {
