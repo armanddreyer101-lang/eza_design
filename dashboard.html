@@ -1,0 +1,113 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>EZA Design — Dashboard</title>
+  <link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+  <header class="topbar">
+    <div class="topbar__brand">
+      <div class="logo-mark"><span>E</span></div>
+      <div class="logo-copy">
+        <div class="logo-main">EZA</div>
+        <div class="logo-sub">Design Studio</div>
+      </div>
+      <div class="brand-divider"></div>
+      <div class="brand-main">
+        <h1>EZA Design</h1>
+        <p>Project Brain for Shoprite Checkers</p>
+      </div>
+    </div>
+    <div class="topbar__user" id="topbarUserInfo">
+      <div>
+        <div class="user__name" id="topbarUserName">Guest</div>
+        <div class="user__role" id="topbarUserRole">Please sign in</div>
+      </div>
+      <button class="btn btn-secondary hidden" id="logoutBtn">Log out</button>
+      <div class="save-indicator hidden" id="saveIndicator">Saved ✓</div>
+    </div>
+  </header>
+
+  <main class="page">
+    <section class="summary-cards" aria-label="Summary metrics">
+      <article class="card summary-card">
+        <p class="card__label">Active Projects</p>
+        <h2 id="activeCount">0</h2>
+      </article>
+      <article class="card summary-card">
+        <p class="card__label">Overdue</p>
+        <h2 id="overdueCount">0</h2>
+      </article>
+      <article class="card summary-card">
+        <p class="card__label">Pipeline Value</p>
+        <h2 id="pipelineValue">R 0</h2>
+      </article>
+    </section>
+
+    <section class="card projects-card" id="dashboardView">
+      <div class="section-header">
+        <div>
+          <h2>Project Dashboard</h2>
+          <p>Manage product projects, stages, costs, margins and deadlines.</p>
+        </div>
+      </div>
+      <div class="dashboard-actions">
+        <button class="btn btn-primary" id="addProjectBtn">Add New Project</button>
+      </div>
+      <div class="add-project-form hidden" id="addProjectForm">
+        <form id="newProjectForm">
+          <div class="form-row">
+            <label for="newProjectName">Project name</label>
+            <input type="text" id="newProjectName" required />
+          </div>
+          <div class="form-row">
+            <label for="newProjectCategory">Category</label>
+            <select id="newProjectCategory" required>
+              <option value="Plants">Plants</option>
+              <option value="Paper Cups">Paper Cups</option>
+              <option value="Ceramics">Ceramics</option>
+              <option value="Other">Other</option>
+            </select>
+          </div>
+          <div class="form-row">
+            <label for="newProjectTargetCost">Target cost</label>
+            <input type="number" id="newProjectTargetCost" min="0" required />
+          </div>
+          <div class="form-row">
+            <label for="newProjectQuantity">Quantity (total units)</label>
+            <input type="number" id="newProjectQuantity" min="0" step="1" required placeholder="e.g. 80000" />
+          </div>
+          <div class="form-row">
+            <label for="newProjectDeadline">Deadline date</label>
+            <input type="date" id="newProjectDeadline" required />
+          </div>
+          <div class="form-row form-actions">
+            <button type="submit" class="btn btn-primary">Create project</button>
+            <button type="button" class="btn btn-secondary" id="cancelNewProjectBtn">Cancel</button>
+          </div>
+        </form>
+      </div>
+      <div class="projects-table-wrapper">
+        <table class="projects-table">
+          <thead>
+            <tr>
+              <th>Project</th>
+              <th>Quantity</th>
+              <th>Stage</th>
+              <th>Target Cost</th>
+              <th>Sell Price</th>
+              <th>Margin</th>
+              <th>Deadline</th>
+            </tr>
+          </thead>
+          <tbody id="projectRows"></tbody>
+        </table>
+      </div>
+    </section>
+  </main>
+
+  <script type="module" src="dashboard.js"></script>
+</body>
+</html>

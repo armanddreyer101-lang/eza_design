@@ -1,0 +1,45 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>EZA Design — Proposal</title>
+  <link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+  <header class="topbar">
+    <div class="topbar__brand">
+      <div class="logo-mark"><span>E</span></div>
+      <div class="logo-copy">
+        <div class="logo-main">EZA</div>
+        <div class="logo-sub">Design Studio</div>
+      </div>
+      <div class="brand-divider"></div>
+      <div class="brand-main">
+        <h1>EZA Design</h1>
+        <p>Project Brain for Shoprite Checkers</p>
+      </div>
+    </div>
+    <div class="topbar__user" id="topbarUserInfo">
+      <div>
+        <div class="user__name" id="topbarUserName">Guest</div>
+        <div class="user__role" id="topbarUserRole">Please sign in</div>
+      </div>
+      <button class="btn btn-secondary hidden" id="logoutBtn">Log out</button>
+      <div class="save-indicator hidden" id="saveIndicator">Saved ✓</div>
+    </div>
+  </header>
+
+  <main class="page">
+    <section class="card proposal-view" id="proposalView">
+      <div class="proposal-nav">
+        <button class="btn nav-btn" id="backToDetail">← Back to project</button>
+        <button class="btn btn-secondary" id="printProposalBtn">Print / Save as PDF</button>
+      </div>
+      <div class="proposal-content" id="proposalContent"></div>
+    </section>
+  </main>
+
+  <script type="module" src="proposal.js"></script>
+</body>
+</html>

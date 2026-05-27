@@ -1,0 +1,34 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>EZA Design — Sign In</title>
+  <link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+  <main class="page">
+    <section class="card login-card" id="loginView">
+      <div class="login-header">
+        <h2>Welcome to EZA Design</h2>
+        <p>Log in to access the project dashboard.</p>
+      </div>
+      <form id="loginForm" class="login-form">
+        <div class="form-row">
+          <label for="loginUsername">Username</label>
+          <input type="text" id="loginUsername" autocomplete="username" required />
+        </div>
+        <div class="form-row">
+          <label for="loginPassword">Password</label>
+          <input type="password" id="loginPassword" autocomplete="current-password" required />
+        </div>
+        <div class="form-row error-message hidden" id="loginError">Invalid username or password.</div>
+        <div class="form-row form-actions">
+          <button type="submit" class="btn btn-primary">Sign In</button>
+        </div>
+      </form>
+    </section>
+  </main>
+  <script type="module" src="auth.js"></script>
+</body>
+</html>
