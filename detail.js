@@ -1,4 +1,4 @@
-import { loadProjects, saveProject, loadProjectImages, saveProjectImages } from './storage.js';
+import { loadProjects, saveProject, uploadProjectImage, deleteProjectImage } from './storage.js';
 import { redirectIfNotAuthenticated, updateTopbarUserInfo, logout } from './auth.js';
 
 let projects = [];
@@ -84,8 +84,6 @@ function enterEditMode() {
 
 function cancelEdit() {
   currentProject = deepClone(editSnapshot);
-  // restore images (not in snapshot)
-  currentProject.images = loadProjectImages(currentProject.number) || [];
   isEditMode = false;
   renderPage();
 }
@@ -417,11 +415,12 @@ function buildEditHTML() {
 
         <div class="card detail-card">
           <div class="section-subtitle">Product photos</div>
-          <p class="text-muted">Upload multiple images.</p>
+          <p class="text-muted">Upload images — saved directly to cloud storage.</p>
           <label class="file-upload">
             <input type="file" id="imageUpload" accept="image/*" multiple />
             Choose images
           </label>
+          <div id="imageUploadStatus" class="text-muted" style="margin-top:0.5rem;font-size:0.85rem;"></div>
           <div class="image-preview-grid" id="imagePreviews"></div>
         </div>
 
@@ -545,7 +544,6 @@ function wireEditEvents() {
     currentProject.shippingDeadline = formatDateForInput(shp);
     currentProject.deliveryDate = formatDateForInput(dlv);
     currentProject.deadline = currentProject.deliveryDate;
-    // update inputs
     const setVal = (id, val) => { const el = document.getElementById(id); if (el) el.value = val; };
     setVal('manufacturingDeadline', currentProject.manufacturingDeadline);
     setVal('shippingDeadline', currentProject.shippingDeadline);
@@ -556,7 +554,7 @@ function wireEditEvents() {
   on('deliveryDate', 'change', (e) => { currentProject.deliveryDate = e.target.value; currentProject.deadline = e.target.value; });
 
   // Image upload
-  on('imageUpload', 'change', (e) => { updateImageFiles(e.target.files); e.target.value = ''; });
+  on('imageUpload', 'change', (e) => { handleImageUpload(e.target.files); e.target.value = ''; });
 
   // Add product
   on('addProductBtn', 'click', () => {
@@ -647,6 +645,8 @@ function updateOverallTargetCost() {
   if (el) el.textContent = formatCurrency(overall);
 }
 
+// ─── IMAGE UPLOAD (Supabase Storage) ───
+
 function renderImagePreviewsInEdit() {
   const area = document.getElementById('imagePreviews');
   if (!area) return;
@@ -658,47 +658,52 @@ function renderImagePreviewsInEdit() {
       <img src="${src}" alt="Product image" />
       <button type="button" class="remove-image-btn btn btn-danger btn-small" data-idx="${idx}">✕</button>
     `;
-    item.querySelector('.remove-image-btn').addEventListener('click', () => {
+    item.querySelector('.remove-image-btn').addEventListener('click', async () => {
       if (confirm('Remove this image?')) {
+        const urlToDelete = currentProject.images[idx];
         currentProject.images.splice(idx, 1);
-        saveProjectImages(currentProject.number, currentProject.images);
+        // Save project immediately so the URL is removed from Supabase DB
+        await saveProject(currentProject);
+        // Then delete the file from Supabase Storage
+        await deleteProjectImage(urlToDelete);
         renderImagePreviewsInEdit();
+        showSavedIndicator();
       }
     });
     area.appendChild(item);
   });
 }
 
-function updateImageFiles(files) {
+async function handleImageUpload(files) {
   const fileList = Array.from(files || []);
   const MAX_IMAGES = 10;
-  const toAdd = fileList.slice(0, MAX_IMAGES - (currentProject.images?.length || 0));
-  toAdd.forEach((file) => {
-    const reader = new FileReader();
-    reader.onload = () => {
-      const img = new Image();
-      img.onload = () => {
-        const MAX_WIDTH = 1200;
-        const scale = Math.min(1, MAX_WIDTH / img.width);
-        const canvas = document.createElement('canvas');
-        canvas.width = Math.round(img.width * scale);
-        canvas.height = Math.round(img.height * scale);
-        canvas.getContext('2d').drawImage(img, 0, 0, canvas.width, canvas.height);
-        try {
-          const dataUrl = canvas.toDataURL('image/jpeg', 0.75);
-          currentProject.images = currentProject.images || [];
-          currentProject.images.push(dataUrl);
-        } catch {
-          currentProject.images = currentProject.images || [];
-          currentProject.images.push(reader.result);
-        }
-        saveProjectImages(currentProject.number, currentProject.images);
-        renderImagePreviewsInEdit();
-      };
-      img.src = reader.result;
-    };
-    reader.readAsDataURL(file);
-  });
+  const slots = MAX_IMAGES - (currentProject.images?.length || 0);
+  if (slots <= 0) {
+    alert('Maximum of 10 images per project.');
+    return;
+  }
+  const toAdd = fileList.slice(0, slots);
+  const statusEl = document.getElementById('imageUploadStatus');
+
+  for (let i = 0; i < toAdd.length; i++) {
+    const file = toAdd[i];
+    if (statusEl) statusEl.textContent = `Uploading image ${i + 1} of ${toAdd.length}…`;
+
+    const url = await uploadProjectImage(currentProject.number, file);
+
+    if (url) {
+      currentProject.images = currentProject.images || [];
+      currentProject.images.push(url);
+      // Save after each upload so the URL is persisted immediately
+      await saveProject(currentProject);
+      renderImagePreviewsInEdit();
+    } else {
+      alert(`Failed to upload ${file.name}. Please try again.`);
+    }
+  }
+
+  if (statusEl) statusEl.textContent = toAdd.length > 0 ? `${toAdd.length} image(s) uploaded ✓` : '';
+  setTimeout(() => { if (statusEl) statusEl.textContent = ''; }, 3000);
 }
 
 // ─── RECURRING ───
@@ -760,7 +765,8 @@ async function initDetailPage() {
   currentProject = getProjectByNumber(projectNumber);
   if (!currentProject) { redirectToDashboard(); return; }
 
-  currentProject.images = loadProjectImages(currentProject.number) || [];
+  // Images are now stored as public URLs inside project.data.images (loaded from Supabase)
+  currentProject.images = currentProject.images || [];
 
   // Migrate old data structure
   if (!currentProject.products && currentProject.components) {

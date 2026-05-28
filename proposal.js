@@ -1,4 +1,4 @@
-import { loadProjects, loadProjectImages } from './storage.js';
+import { loadProjects } from './storage.js';
 import { redirectIfNotAuthenticated, updateTopbarUserInfo, logout } from './auth.js';
 
 let currentProject = null;
@@ -215,7 +215,8 @@ async function initProposalPage() {
   currentProject = projects.find((p) => p.number === projectNumber);
   if (!currentProject) { window.location.href = 'dashboard.html'; return; }
 
-  currentProject.images = loadProjectImages(currentProject.number) || [];
+  // Images are stored as public URLs inside project.data.images — loaded automatically
+  currentProject.images = currentProject.images || [];
 
   const content = document.getElementById('proposalContent');
   if (content) {
