@@ -123,8 +123,8 @@ function renderInternalProposal() {
       <div>
         <p><strong>EZA Design</strong></p>
         <p>Project Brain • Product development and costing</p>
-        <p>contact@ezadesign.co.za</p>
-        <p>+27 21 555 0101</p>
+        <p>armand.dreyer101@icloud.com</p>
+        <p>+27 66 22 66 074</p>
       </div>
       <div>
         <p><strong>Approved by</strong></p>
@@ -189,8 +189,8 @@ function renderClientProposal() {
       <div>
         <p><strong>EZA Design</strong></p>
         <p>Professional proposal for Shoprite Checkers</p>
-        <p>contact@ezadesign.co.za</p>
-        <p>+27 21 555 0101</p>
+        <p>armand.dreyer101@icloud.com</p>
+        <p>+27 66 22 66 074</p>
       </div>
       <div>
         <p><strong>Prepared for</strong></p>
